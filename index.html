@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>LabMate — AI Lab Report Helper for Chemistry Students</title>
+<meta name="description" content="Turn rough experiment notes into a clean, structured chemistry lab report draft in seconds." />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,700;9..144,900&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<script src="https://cdnjs.cloudflare.com/ajax/libs/marked/12.0.0/marked.min.js"></script>
+<style>
+  :root {
+    --paper: #f7f3e9;
+    --paper-deep: #efe8d8;
+    --ink: #1d2a4d;
+    --ink-soft: #41507a;
+    --rule: #d8cfb8;
+    --accent: #c2571b;
+    --accent-soft: #f3dcc9;
+    --green: #2c6e49;
+    --white: #fffdf7;
+    --shadow: 0 2px 0 var(--rule), 0 14px 34px rgba(29, 42, 77, 0.10);
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    font-family: 'IBM Plex Sans', sans-serif;
+    background:
+      repeating-linear-gradient(transparent, transparent 31px, rgba(29,42,77,0.045) 31px, rgba(29,42,77,0.045) 32px),
+      radial-gradient(1200px 500px at 85% -10%, #fdf8ec, transparent),
+      var(--paper);
+    color: var(--ink);
+    min-height: 100vh;
+  }
+
+  /* ---------- Header ---------- */
+  header {
+    border-bottom: 3px double var(--rule);
+    background: linear-gradient(180deg, var(--white), var(--paper));
+    padding: 26px 20px 22px;
+  }
+  .header-inner {
+    max-width: 1180px; margin: 0 auto;
+    display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap;
+  }
+  .brand { display: flex; align-items: center; gap: 14px; }
+  .flask {
+    width: 46px; height: 46px; flex: 0 0 46px;
+    background: var(--ink); border-radius: 12px;
+    display: grid; place-items: center;
+    box-shadow: 3px 3px 0 var(--accent);
+  }
+  .brand h1 {
+    font-family: 'Fraunces', serif; font-weight: 900; font-size: 1.9rem; letter-spacing: -0.5px;
+  }
+  .brand h1 span { color: var(--accent); }
+  .tagline { color: var(--ink-soft); font-size: 0.92rem; margin-top: 2px; }
+  .badge {
+    font-family: 'IBM Plex Mono', monospace; font-size: 0.72rem;
+    border: 1.5px solid var(--ink); border-radius: 999px; padding: 6px 14px;
+    background: var(--accent-soft); white-space: nowrap;
+  }
+
+  /* ---------- Layout ---------- */
+  .wrap {
+    max-width: 1180px; margin: 0 auto; padding: 28px 20px 70px;
+    display: grid; grid-template-columns: minmax(330px, 460px) 1fr; gap: 26px; align-items: start;
+  }
+  @media (max-width: 920px) { .wrap { grid-template-columns: 1fr; } }
+
+  /* ---------- Form card ---------- */
+  .card {
+    background: var(--white);
+    border: 1.5px solid var(--rule);
+    border-radius: 16px;
+    box-shadow: var(--shadow);
+    overflow: hidden;
+  }
+  .card-head {
+    padding: 16px 22px; border-bottom: 1.5px dashed var(--rule);
+    display: flex; align-items: baseline; justify-content: space-between; gap: 10px;
+    background: linear-gradient(180deg, #fffefa, var(--white));
+  }
+  .card-head h2 { font-family: 'Fraunces', serif; font-size: 1.18rem; font-weight: 700; }
+  .step-no {
+    font-family: 'IBM Plex Mono', monospace; font-size: 0.7rem; color: var(--accent); letter-spacing: 1.5px;
+  }
+  .card-body { padding: 20px 22px 24px; }
+
+  label {
+    display: block; font-weight: 600; font-size: 0.86rem; margin: 16px 0 6px;
+  }
+  label:first-of-type { margin-top: 0; }
+  label .opt { color: var(--ink-soft); font-weight: 400; font-size: 0.78rem; }
+  input[type="text"], textarea {
+    width: 100%; border: 1.5px solid var(--rule); border-radius: 10px;
+    background: #fffefb; padding: 11px 13px;
+    font-family: 'IBM Plex Mono', monospace; font-size: 0.86rem; color: var(--ink);
+    transition: border-color .15s, box-shadow .15s;
+    resize: vertical;
+  }
+  input:focus, textarea:focus {
+    outline: none; border-color: var(--ink);
+    box-shadow: 0 0 0 3px rgba(29,42,77,0.10);
+  }
+  textarea { min-height: 84px; line-height: 1.55; }
+  #procedure { min-height: 120px; }
+
+  .btn-row { display: flex; gap: 10px; margin-top: 22px; flex-wrap: wrap; }
+  button {
+    font-family: 'IBM Plex Sans', sans-serif; font-weight: 600; font-size: 0.9rem;
+    border-radius: 10px; padding: 12px 18px; cursor: pointer;
+    border: 1.5px solid var(--ink);
+    transition: transform .12s, box-shadow .12s, background .15s;
+  }
+  button:active { transform: translateY(1px); }
+  .btn-primary {
+    background: var(--ink); color: var(--white); flex: 1;
+    box-shadow: 3px 3px 0 var(--accent);
+  }
+  .btn-primary:hover { box-shadow: 1px 1px 0 var(--accent); transform: translate(2px, 2px); }
+  .btn-primary:disabled { opacity: .55; cursor: wait; box-shadow: none; transform: none; }
+  .btn-ghost { background: transparent; color: var(--ink); }
+  .btn-ghost:hover { background: var(--paper-deep); }
+
+  .hint {
+    margin-top: 14px; font-size: 0.78rem; color: var(--ink-soft);
+    border-left: 3px solid var(--accent); padding-left: 10px; line-height: 1.5;
+  }
+
+  /* ---------- Report panel ---------- */
+  .report-card { min-height: 540px; display: flex; flex-direction: column; }
+  .report-tools { display: flex; gap: 8px; }
+  .tool-btn {
+    font-size: 0.78rem; padding: 7px 12px; border-radius: 8px;
+    border: 1.5px solid var(--rule); background: var(--white); color: var(--ink-soft);
+  }
+  .tool-btn:hover { border-color: var(--ink); color: var(--ink); }
+  .report-body { padding: 26px 30px 36px; overflow-wrap: break-word; flex: 1; }
+
+  /* Empty state */
+  .empty {
+    height: 100%; min-height: 420px; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; text-align: center; gap: 14px; padding: 30px;
+  }
+  .empty .big-flask { font-size: 0; }
+  .empty h3 { font-family: 'Fraunces', serif; font-size: 1.35rem; }
+  .empty p { color: var(--ink-soft); font-size: 0.9rem; max-width: 380px; line-height: 1.6; }
+
+  /* Loading */
+  .loading { display: none; flex-direction: column; align-items: center; justify-content: center; min-height: 420px; gap: 18px; }
+  .beaker {
+    width: 54px; height: 54px; border: 3px solid var(--ink); border-radius: 0 0 16px 16px;
+    border-top: none; position: relative; overflow: hidden;
+  }
+  .beaker::after {
+    content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: 45%;
+    background: linear-gradient(180deg, var(--accent), #a34312);
+    animation: bubble 1.3s ease-in-out infinite alternate;
+  }
+  @keyframes bubble { from { height: 30%; } to { height: 70%; } }
+  .loading p { font-family: 'IBM Plex Mono', monospace; font-size: 0.82rem; color: var(--ink-soft); }
+
+  /* Rendered report typography */
+  .report-content h2 {
+    font-family: 'Fraunces', serif; font-size: 1.25rem; margin: 26px 0 10px;
+    padding-bottom: 6px; border-bottom: 1.5px solid var(--rule);
+  }
+  .report-content h2:first-child { margin-top: 0; }
+  .report-content p { line-height: 1.7; margin: 10px 0; font-size: 0.94rem; }
+  .report-content li { line-height: 1.7; margin: 6px 0 6px 20px; font-size: 0.94rem; }
+  .report-content strong { color: var(--accent); }
+  .report-content em { color: var(--ink-soft); }
+  .report-content table {
+    border-collapse: collapse; margin: 14px 0; width: 100%; font-size: 0.88rem;
+    font-family: 'IBM Plex Mono', monospace;
+  }
+  .report-content th, .report-content td {
+    border: 1.5px solid var(--rule); padding: 8px 12px; text-align: left;
+  }
+  .report-content th { background: var(--paper-deep); font-weight: 600; }
+  .report-content code {
+    font-family: 'IBM Plex Mono', monospace; background: var(--paper-deep);
+    border-radius: 5px; padding: 2px 6px; font-size: 0.85em;
+  }
+
+  .error-box {
+    display: none; margin: 20px 30px; padding: 14px 16px; border-radius: 10px;
+    background: #fdeceb; border: 1.5px solid #d6675e; color: #8c2f28; font-size: 0.88rem;
+  }
+
+  footer {
+    text-align: center; padding: 26px 20px 40px; color: var(--ink-soft); font-size: 0.8rem;
+  }
+  footer b { color: var(--ink); }
+
+  .toast {
+    position: fixed; bottom: 26px; left: 50%; transform: translateX(-50%) translateY(80px);
+    background: var(--ink); color: var(--white); padding: 11px 22px; border-radius: 999px;
+    font-size: 0.85rem; box-shadow: 0 10px 26px rgba(29,42,77,.35);
+    transition: transform .3s ease; z-index: 50;
+  }
+  .toast.show { transform: translateX(-50%) translateY(0); }
+
+  @media print {
+    header, .form-col, footer, .report-tools, .toast { display: none !important; }
+    body { background: white; }
+    .wrap { display: block; padding: 0; max-width: 100%; }
+    .card { border: none; box-shadow: none; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-inner">
+    <div class="brand">
+      <div class="flask">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#f7f3e9" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M9 3h6"/><path d="M10 3v6.3L4.7 18a2 2 0 0 0 1.8 3h11a2 2 0 0 0 1.8-3L14 9.3V3"/>
+          <path d="M7.5 14h9" stroke="#c2571b"/>
+        </svg>
+      </div>
+      <div>
+        <h1>Lab<span>Mate</span></h1>
+        <div class="tagline">Rough notes in → clean chemistry lab report draft out</div>
+      </div>
+    </div>
+    <div class="badge">FOR BSc / MSc CHEMISTRY STUDENTS</div>
+  </div>
+</header>
+
+<main class="wrap">
+
+  <!-- ============ FORM ============ -->
+  <section class="card form-col">
+    <div class="card-head">
+      <h2>Your experiment notes</h2>
+      <span class="step-no">STEP 01</span>
+    </div>
+    <div class="card-body">
+      <label for="title">Experiment title</label>
+      <input type="text" id="title" placeholder="e.g. Estimation of oxalic acid by titration with KMnO₄" />
+
+      <label for="aim">Aim <span class="opt">(optional — we'll write it if empty)</span></label>
+      <input type="text" id="aim" placeholder="e.g. To determine the strength of the given oxalic acid solution" />
+
+      <label for="chemicals">Chemicals / reagents <span class="opt">(optional)</span></label>
+      <textarea id="chemicals" placeholder="e.g. 0.1 N KMnO₄, oxalic acid solution, dilute H₂SO₄"></textarea>
+
+      <label for="apparatus">Apparatus <span class="opt">(optional)</span></label>
+      <textarea id="apparatus" placeholder="e.g. burette, pipette (10 mL), conical flask, water bath"></textarea>
+
+      <label for="procedure">Rough procedure notes <span class="opt">(required — messy is fine!)</span></label>
+      <textarea id="procedure" placeholder="e.g. filled burette with KMnO4, pipetted 10ml oxalic acid into flask, added 5ml dil H2SO4, heated to 60-70C, titrated till light pink colour stays..."></textarea>
+
+      <label for="observations">Observations / readings <span class="opt">(optional)</span></label>
+      <textarea id="observations" placeholder="e.g. Reading 1: 10.2 mL, Reading 2: 10.3 mL, Reading 3: 10.2 mL. Concordant = 10.2 mL"></textarea>
+
+      <label for="notes">Anything else? <span class="opt">(optional)</span></label>
+      <input type="text" id="notes" placeholder="e.g. teacher wants 5 precautions, include indicator explanation" />
+
+      <div class="btn-row">
+        <button class="btn-primary" id="generateBtn">⚗ Generate report draft</button>
+        <button class="btn-ghost" id="exampleBtn" title="Fill the form with a sample experiment">Try example</button>
+      </div>
+
+      <p class="hint">LabMate writes a <b>draft</b> for you to review and edit — it never invents readings. Missing values appear as placeholders you can fill in.</p>
+    </div>
+  </section>
+
+  <!-- ============ REPORT ============ -->
+  <section class="card report-card">
+    <div class="card-head">
+      <h2>Report draft</h2>
+      <div class="report-tools">
+        <button class="tool-btn" id="copyBtn">Copy</button>
+        <button class="tool-btn" id="downloadBtn">Download .md</button>
+        <button class="tool-btn" id="printBtn">Print / PDF</button>
+      </div>
+    </div>
+
+    <div class="error-box" id="errorBox"></div>
+
+    <div class="report-body">
+      <div class="empty" id="emptyState">
+        <svg class="big-flask" width="70" height="70" viewBox="0 0 24 24" fill="none" stroke="#41507a" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M9 3h6"/><path d="M10 3v6.3L4.7 18a2 2 0 0 0 1.8 3h11a2 2 0 0 0 1.8-3L14 9.3V3"/>
+          <path d="M7.5 14h9" stroke="#c2571b"/>
+        </svg>
+        <h3>Your report will appear here</h3>
+        <p>Fill in your experiment notes on the left — even messy shorthand works — and LabMate will structure them into a proper lab report with Aim, Theory, Procedure, Observations, Calculations and more.</p>
+      </div>
+
+      <div class="loading" id="loadingState">
+        <div class="beaker"></div>
+        <p id="loadingMsg">Heating the mixture…</p>
+      </div>
+
+      <article class="report-content" id="reportContent"></article>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <b>LabMate</b> · Built as a Generative AI capstone project · AI drafts can make mistakes — always verify values before submission.
+</footer>
+
+<div class="toast" id="toast">Copied to clipboard ✓</div>
+
+<script>
+  const $ = (id) => document.getElementById(id);
+  let rawMarkdown = '';
+
+  const loadingMsgs = [
+    'Heating the mixture…',
+    'Waiting for the endpoint…',
+    'Balancing the equations…',
+    'Recording observations…',
+    'Calculating normality…',
+    'Writing the conclusion…'
+  ];
+  let msgTimer = null;
+
+  function setLoading(on) {
+    $('emptyState').style.display = on ? 'none' : (rawMarkdown ? 'none' : 'flex');
+    $('loadingState').style.display = on ? 'flex' : 'none';
+    $('reportContent').style.display = on ? 'none' : 'block';
+    $('generateBtn').disabled = on;
+    $('generateBtn').textContent = on ? 'Generating…' : '⚗ Generate report draft';
+    if (on) {
+      let i = 0;
+      msgTimer = setInterval(() => {
+        i = (i + 1) % loadingMsgs.length;
+        $('loadingMsg').textContent = loadingMsgs[i];
+      }, 1800);
+    } else if (msgTimer) {
+      clearInterval(msgTimer);
+    }
+  }
+
+  function showError(msg) {
+    const box = $('errorBox');
+    box.textContent = msg;
+    box.style.display = 'block';
+    setTimeout(() => { box.style.display = 'none'; }, 7000);
+  }
+
+  function toast(msg) {
+    const t = $('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 2200);
+  }
+
+  $('exampleBtn').addEventListener('click', () => {
+    $('title').value = 'Estimation of oxalic acid by titration against standard KMnO₄ solution';
+    $('aim').value = '';
+    $('chemicals').value = '0.1 N KMnO4 (standard), oxalic acid solution (unknown strength), dilute H2SO4 (2N)';
+    $('apparatus').value = 'Burette (50 mL), pipette (10 mL), conical flask, beaker, water bath, burette stand';
+    $('procedure').value = 'rinsed and filled burette with KMnO4. pipetted 10 ml oxalic acid into conical flask. added about 5 ml dilute H2SO4. heated flask to 60-70 C on water bath. titrated hot solution against KMnO4 with constant shaking. endpoint = permanent light pink colour. repeated for 3 concordant readings.';
+    $('observations').value = 'Burette readings: R1 initial 0.0 final 10.2 ml, R2 initial 10.2 final 20.5 (= 10.3 ml), R3 initial 20.5 final 30.7 (= 10.2 ml). Concordant value = 10.2 ml';
+    $('notes').value = 'Self-indicator concept should be explained in theory';
+    toast('Example loaded — hit Generate!');
+  });
+
+  $('generateBtn').addEventListener('click', async () => {
+    const payload = {
+      title: $('title').value.trim(),
+      aim: $('aim').value.trim(),
+      chemicals: $('chemicals').value.trim(),
+      apparatus: $('apparatus').value.trim(),
+      procedure: $('procedure').value.trim(),
+      observations: $('observations').value.trim(),
+      notes: $('notes').value.trim(),
+    };
+
+    if (!payload.title || !payload.procedure) {
+      showError('Please fill in at least the experiment title and rough procedure notes.');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const res = await fetch('/api/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Something went wrong.');
+
+      rawMarkdown = data.report;
+      $('reportContent').innerHTML = marked.parse(rawMarkdown);
+      $('emptyState').style.display = 'none';
+      $('reportContent').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    } catch (err) {
+      showError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  });
+
+  $('copyBtn').addEventListener('click', async () => {
+    if (!rawMarkdown) return toast('Nothing to copy yet');
+    await navigator.clipboard.writeText(rawMarkdown);
+    toast('Copied to clipboard ✓');
+  });
+
+  $('downloadBtn').addEventListener('click', () => {
+    if (!rawMarkdown) return toast('Nothing to download yet');
+    const blob = new Blob([rawMarkdown], { type: 'text/markdown' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = ($('title').value.trim() || 'lab-report').toLowerCase().replace(/[^a-z0-9]+/g, '-') + '.md';
+    a.click();
+    URL.revokeObjectURL(a.href);
+  });
+
+  $('printBtn').addEventListener('click', () => {
+    if (!rawMarkdown) return toast('Generate a report first');
+    window.print();
+  });
+</script>
+</body>
+</html>
